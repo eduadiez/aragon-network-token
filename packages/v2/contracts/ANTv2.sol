@@ -24,7 +24,7 @@ contract ANTv2 is IERC20 {
     address public minter;
     uint256 public totalSupply;
     mapping (address => uint256) public balanceOf;
-    mapping (address => mapping(address => uint256)) public allowance;
+    mapping (address => mapping (address => uint256)) public allowance;
 
     bytes32 public DOMAIN_SEPARATOR;
 
@@ -32,6 +32,8 @@ contract ANTv2 is IERC20 {
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
     mapping (address => uint256) public nonces;
 
+    // Note: I know these constants are related to the storage variables defined right after, but it was harder
+    // to read this way, I would place all the constants together with proper comments to provide full context if needed
     // bytes32 public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH =
     //     keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)");
     bytes32 public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH = 0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267;
@@ -52,6 +54,7 @@ contract ANTv2 is IERC20 {
             abi.encode(
                 keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
                 keccak256(bytes(name)),
+                // Note: Should we use 2 here instead?
                 keccak256(bytes('1')),
                 chainId,
                 address(this)
@@ -61,6 +64,8 @@ contract ANTv2 is IERC20 {
         _changeMinter(initialMinter);
     }
 
+    // Note: any reason why placing the internal methods at the beginning?
+    // Note: maybe "encodedData" sounds better
     function _validateSignedData(address signer, bytes32 encodeData, uint8 v, bytes32 r, bytes32 s) internal view {
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -84,12 +89,14 @@ contract ANTv2 is IERC20 {
         emit Transfer(address(0), to, value);
     }
 
+    // Note: Not against, but we are not providing any built-in solution to avoid front-running issues here
     function _approve(address owner, address spender, uint256 value) private {
         allowance[owner][spender] = value;
         emit Approval(owner, spender, value);
     }
 
     function _transfer(address from, address to, uint256 value) private {
+        // Note: are we good with not performing any validations here? like zero address, or token address
         balanceOf[from] = balanceOf[from].sub(value);
         balanceOf[to] = balanceOf[to].add(value);
         emit Transfer(from, to, value);
@@ -115,6 +122,7 @@ contract ANTv2 is IERC20 {
     }
 
     function transferFrom(address from, address to, uint256 value) external returns (bool) {
+        // Note: `allowance[from][msg.sender]` could be cached to avoid one extra SLOAD
         if (allowance[from][msg.sender] != uint256(-1)) {
             allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
         }
